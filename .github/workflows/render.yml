@@ -2,6 +2,8 @@ name: render
 on:
   push:
     paths: ['jobs/**']
+permissions:
+  contents: read
 jobs:
   render:
     runs-on: ubuntu-latest
@@ -21,12 +23,14 @@ jobs:
           HYPERFRAMES_NO_UPDATE_CHECK: '1'
           HYPERFRAMES_SKIP_SKILLS: '1'
           HYPERFRAMES_BROWSER_PATH: /usr/bin/google-chrome
+          GH_TOKEN: ${{ github.token }}
         run: |
-          arquivo=$(git diff --name-only --diff-filter=A HEAD~1 HEAD -- jobs/ | grep '\.tgz$' | head -1)
+          arquivo=$(git diff --name-only --diff-filter=A HEAD~1 HEAD -- jobs/ | grep '\.txt$' | head -1)
           if [ -z "$arquivo" ]; then echo "Nenhum job novo."; exit 0; fi
-          id=$(basename "$arquivo" .tgz)
+          id=$(basename "$arquivo" .txt)
           mkdir -p "trabalho" "saida"
-          tar -xzf "$arquivo" -C trabalho
+          gh release download jobs -p "$id.tgz" -O job.tgz
+          tar -xzf job.tgz -C trabalho
           cd trabalho
           npx --yes hyperframes render -o "$GITHUB_WORKSPACE/saida/video.mp4" -q "${QUALIDADE:-standard}" -f 30 -w 2
           echo "id=$id" >> "$GITHUB_OUTPUT"
